@@ -1,0 +1,54 @@
+{
+  "name": "use-realtime",
+  "version": "1.0.0",
+  "description": "Ready-to-use React hooks for real-time and live data (WebSocket, SSE, Presence).",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --minify --clean --treeshake",
+    "dev": "tsup src/index.ts --format cjs,esm --watch --dts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitest/coverage-v8": "^0.34.0",
+    "jsdom": "^22.1.0",
+    "mock-socket": "^9.2.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^7.1.0",
+    "typescript": "^5.1.0",
+    "vitest": "^0.34.0"
+  },
+  "keywords": [
+    "react",
+    "hooks",
+    "websocket",
+    "sse",
+    "realtime",
+    "presence",
+    "optimistic-update"
+  ],
+  "author": "Junaid Shahzad",
+  "license": "MIT"
+}
