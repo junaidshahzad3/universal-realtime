@@ -1,66 +1,178 @@
-# use-realtime 📡
+# universal-realtime 📡
 
-Ready-to-use React hooks for real-time and live data. Small, well-tested, and zero-bloat.
+A premium, lightweight, zero-dependency real-time engine and hooks package for JavaScript, TypeScript, Node.js, and React. 
 
-## 🚀 Installation
+`universal-realtime` delivers a high-performance framework-agnostic client (`RealtimeClient`) alongside ultra-optimized React wrappers. It provides out-of-the-box support for auto-reconnection (exponential backoff), customizable heartbeats (ping/pong), Server-Sent Events, user presence, and optimistic UI updates.
+
+---
+
+## 🚀 Key Features
+
+* **Framework-Agnostic Core**: Build with `RealtimeClient` in vanilla JS/TS, Node.js (via custom WebSocket constructors), Angular, Vue, Svelte, or SSR environments (Next.js/Remix safe).
+* **Multiplexed React Hooks**: Streamline app performance using `RealtimeProvider` and `useRealtime` to share a single, robust connection across many components with zero React Context render cascades.
+* **Traffic-Aware Heartbeats**: Minimize unnecessary bandwidth with keep-alive heartbeats that only ping when the websocket connection is idle.
+* **Auto-Reconnection**: Resilient reconnection using a custom exponential backoff manager.
+* **Zero Dependencies & Tree-Shakable**: Built using modern ES tooling compiling to a microscopic size (~8 KB minified).
+
+---
+
+## 📦 Installation
 
 ```bash
-npm install use-realtime
+npm install universal-realtime
 ```
 
-## 🪝 Hooks
+---
 
-### 1. `useWebSocket`
-WebSocket connection with auto-reconnect and exponential backoff.
+## 🔌 Framework-Agnostic Engine (`RealtimeClient`)
 
-```tsx
-const { lastMessage, sendMessage, connectionStatus } = useWebSocket('ws://api.example.com');
+Perfect for pure JS/TS scripts, backend Node.js, or any non-React frameworks.
+
+```typescript
+import { RealtimeClient } from 'universal-realtime';
+
+// Instantiates client (gracefully safe in SSR)
+const client = new RealtimeClient('ws://api.example.com', {
+  reconnect: true,
+  reconnectAttempts: 5,
+  heartbeat: {
+    interval: 30000,
+    timeout: 5000,
+    message: 'ping'
+  }
+});
+
+// Subscribe to connection status changes
+const unsubscribeStatus = client.subscribeStatus((status) => {
+  console.log('Connection status is:', status); // 'connecting' | 'open' | 'closing' | 'closed' | 'reconnecting'
+});
+
+// Subscribe to incoming messages
+const unsubscribeMessages = client.subscribe((message) => {
+  console.log('Received:', message);
+});
+
+// Send a message
+client.sendMessage({ type: 'greet', body: 'hello' });
+
+// Cleanup
+unsubscribeStatus();
+unsubscribeMessages();
+client.disconnect();
 ```
 
-### 2. `useSSE`
-Server-Sent Events with auto-reconnect.
+### Node.js Support
+In backend Node.js environments (where native `WebSocket` might not be globally available), pass a custom WebSocket constructor (e.g. from the `ws` package):
 
-```tsx
-const { data, connectionStatus } = useSSE('https://api.example.com/stream');
-```
+```typescript
+import { RealtimeClient } from 'universal-realtime';
+import WebSocket from 'ws'; // node WebSocket library
 
-### 3. `usePresence`
-"Who's online" tracking built on WebSockets.
-
-```tsx
-const { users, count } = usePresence({
-  wsUrl: 'ws://api.example.com/presence',
-  roomId: 'chat-123',
-  identity: { id: 'user-1', metadata: { name: 'Junaid' } }
+const client = new RealtimeClient('ws://api.example.com', {
+  webSocketConstructor: WebSocket,
 });
 ```
 
-### 4. `useOptimisticUpdate`
-Instant UI updates with automatic rollback.
+---
+
+## 🪝 React Hooks API (Thin Wrappers)
+
+### 1. Central Connection Provider (`RealtimeProvider` + `useRealtime`)
+Multiplexes all real-time events over **exactly 1 WebSocket connection** to reduce client resource load and prevent global React Context render cascades.
 
 ```tsx
-const { data, update, isPending } = useOptimisticUpdate(initialData);
+import React from 'react';
+import { RealtimeProvider, useRealtime } from 'universal-realtime';
 
-const handleUpdate = () => {
-  update(newData, async () => {
-    return await api.save(newData);
+function App() {
+  return (
+    <RealtimeProvider url="ws://api.example.com">
+      <MessageList />
+    </RealtimeProvider>
+  );
+}
+
+function MessageList() {
+  // Selective rendering: only re-renders when filters match!
+  const { lastMessage, sendMessage, connectionStatus } = useRealtime<string>(
+    (msg) => msg.startsWith('important:')
+  );
+
+  return (
+    <div>
+      <p>Connection: {connectionStatus}</p>
+      <p>Last Important Message: {lastMessage}</p>
+      <button onClick={() => sendMessage('Hello!')}>Send</button>
+    </div>
+  );
+}
+```
+
+### 2. Standalone Hook (`useWebSocket`)
+For simple, component-isolated WebSocket connections.
+
+```tsx
+import { useWebSocket } from 'universal-realtime';
+
+function MyComponent() {
+  const { lastMessage, sendMessage, connectionStatus } = useWebSocket('ws://api.example.com');
+  
+  return <div>Status: {connectionStatus}</div>;
+}
+```
+
+### 3. Server-Sent Events (`useSSE`)
+Robust stream consumer with built-in auto-reconnection.
+
+```tsx
+import { useSSE } from 'universal-realtime';
+
+function EventStream() {
+  const { data, connectionStatus } = useSSE('https://api.example.com/stream');
+  
+  return <div>Data: {data} | Connection: {connectionStatus}</div>;
+}
+```
+
+### 4. Room Presence (`usePresence`)
+Track "who's online" in real-time rooms.
+
+```tsx
+import { usePresence } from 'universal-realtime';
+
+function ChatRoom() {
+  const { users, count } = usePresence({
+    wsUrl: 'ws://api.example.com/presence',
+    roomId: 'lobby',
+    identity: { id: 'user-1', metadata: { name: 'Junaid' } }
   });
-};
+
+  return <div>Active Users ({count}): {users.map(u => u.metadata.name).join(', ')}</div>;
+}
 ```
 
-### 5. `useConnectionStatus`
-Unified browser online/offline state.
+### 5. Optimistic UI Updates (`useOptimisticUpdate`)
+Instantly update the user interface and seamlessly roll back state if the network mutation fails.
 
 ```tsx
-const { isOnline, since } = useConnectionStatus();
+import { useOptimisticUpdate } from 'universal-realtime';
+
+function TodoList({ initialTodos }) {
+  const { data: todos, update, isPending } = useOptimisticUpdate(initialTodos);
+
+  const addTodo = (newTodo) => {
+    update([...todos, newTodo], async () => {
+      // Async server call
+      return await api.saveTodo(newTodo);
+    });
+  };
+
+  return <button onClick={() => addTodo({ text: 'Buy milk' })}>Add Todo</button>;
+}
 ```
 
-## 🛠 Features
-- **Zero dependencies**: Only React as a peer dependency.
-- **Tree-shakable**: Small bundle size (<15kb gzipped).
-- **TypeScript**: Full type safety and generics.
-- **SSR Safe**: Works with Next.js and Remix.
-- **Auto-reconnect**: Built-in exponential backoff.
+---
 
 ## 📄 License
 MIT
+

@@ -4,7 +4,7 @@ A real-time analytics dashboard using Server-Sent Events (`useSSE`) to stream li
 
 ```tsx
 import React from 'react';
-import { useSSE } from 'use-realtime';
+import { useSSE } from 'universal-realtime';
 
 interface DashboardMetrics {
   cpuUsage: number;

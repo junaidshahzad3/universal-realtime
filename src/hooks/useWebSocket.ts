@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ReconnectManager } from '../utils/reconnect.js';
+import { RealtimeClient } from '../core/RealtimeClient.js';
 import type { UseWebSocketOptions, UseWebSocketReturn } from '../types/index.js';
 
 /**
  * WebSocket hook with auto-reconnect and exponential backoff.
+ * Delegates 100% of socket connection, heartbeat, and reconnection logic
+ * to the framework-agnostic RealtimeClient class.
  * 
  * @param url - The WebSocket URL (null to disable connection).
  * @param options - Configuration options for the connection.
@@ -18,106 +20,60 @@ export function useWebSocket<TMessage = unknown>(
     url ? 'connecting' : 'closed'
   );
   const [reconnectCount, setReconnectCount] = useState(0);
-  
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectManagerRef = useRef<ReconnectManager | null>(null);
 
-  // Store options in a ref to prevent infinite re-connection loops
+  const clientRef = useRef<RealtimeClient<TMessage> | null>(null);
   const optionsRef = useRef(options);
+
   useEffect(() => {
     optionsRef.current = options;
   });
-
-  const connect = useCallback(() => {
-    if (typeof window === 'undefined' || !url) return;
-
-    setConnectionStatus('connecting');
-    const ws = new WebSocket(url, optionsRef.current?.protocols);
-    wsRef.current = ws;
-
-    ws.onopen = (event) => {
-      setConnectionStatus('open');
-      setReconnectCount(0);
-      reconnectManagerRef.current?.stop();
-      optionsRef.current?.onOpen?.(event);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data) as TMessage;
-        if (optionsRef.current?.filter && !optionsRef.current.filter(data)) {
-          return;
-        }
-        setLastMessage(data);
-        optionsRef.current?.onMessage?.(data);
-      } catch (e) {
-        const data = event.data as unknown as TMessage;
-        setLastMessage(data);
-        optionsRef.current?.onMessage?.(data);
-      }
-    };
-
-    ws.onerror = (event) => {
-      optionsRef.current?.onError?.(event);
-    };
-
-    ws.onclose = (event) => {
-      // Avoid state updates if component is unmounted or url changed
-      if (wsRef.current !== ws) return;
-
-      setConnectionStatus('closed');
-      optionsRef.current?.onClose?.(event);
-
-      if (optionsRef.current?.reconnect !== false && url) {
-        setConnectionStatus('reconnecting');
-        reconnectManagerRef.current?.start();
-      }
-    };
-  }, [url]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     if (!url) {
       setConnectionStatus('closed');
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      setReconnectCount(0);
       return;
     }
 
-    reconnectManagerRef.current = new ReconnectManager({
-      maxAttempts: options?.reconnectAttempts ?? 10,
-      baseInterval: options?.reconnectInterval ?? 1000,
-      maxInterval: options?.maxReconnectInterval ?? 30000,
-      onReconnect: (attempt) => {
-        setReconnectCount(attempt + 1);
-        connect();
+    const client = new RealtimeClient<TMessage>(url, {
+      ...options,
+      onOpen: (event) => {
+        optionsRef.current?.onOpen?.(event);
       },
-      onFailed: () => {
-        setConnectionStatus('closed');
+      onClose: (event) => {
+        optionsRef.current?.onClose?.(event);
+      },
+      onError: (event) => {
+        optionsRef.current?.onError?.(event);
+      },
+      onMessage: (message) => {
+        optionsRef.current?.onMessage?.(message);
       },
     });
 
-    connect();
+    clientRef.current = client;
+
+    const unsubscribeMessage = client.subscribe((msg) => {
+      setLastMessage(msg);
+    });
+
+    const unsubscribeStatus = client.subscribeStatus((status) => {
+      setConnectionStatus(status);
+      setReconnectCount(client.getReconnectCount());
+    });
 
     return () => {
-      reconnectManagerRef.current?.stop();
-      if (wsRef.current) {
-        // Prevent onclose from triggering reconnect during unmount
-        const ws = wsRef.current;
-        wsRef.current = null;
-        ws.close();
-      }
+      client.disconnect();
+      clientRef.current = null;
+      unsubscribeMessage();
+      unsubscribeStatus();
     };
-  }, [url, connect, options?.reconnectAttempts, options?.reconnectInterval, options?.maxReconnectInterval]);
+  }, [url]);
 
   const sendMessage = useCallback((data: TMessage | string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message = typeof data === 'string' ? data : JSON.stringify(data);
-      wsRef.current.send(message);
-    }
+    clientRef.current?.sendMessage(data);
   }, []);
 
   return {

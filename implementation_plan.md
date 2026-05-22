@@ -1,75 +1,40 @@
-# Implementation Plan - use-realtime
+# Implementation Plan - Decoupled Class-Based Core & Universal Realtime Engine
 
-Building a focused collection of React hooks for real-time and live data.
+This plan covers the transition of the library into a split-architecture engine: a core, framework-agnostic vanilla JS/TS engine (`RealtimeClient`) and a set of thin, high-performance React hook wrappers (`useWebSocket`, `RealtimeProvider`, `useRealtime`).
 
-## Goal
-Create a small, well-tested, zero-bloat npm library providing 5 production-quality hooks: `useWebSocket`, `useSSE`, `usePresence`, `useOptimisticUpdate`, and `useConnectionStatus`.
+Furthermore, in response to direct feedback, the package has been completely renamed to **`universal-realtime`** to reflect its new universal frontend-and-backend capabilities, and it has been validated to be fully available and unique on the npm registry.
 
-## User Review Required
+---
 
-> [!IMPORTANT]
-> The directory `d:/Projects/Portfolio/use-realtime` was found to be empty. I will initialize the project from scratch following your requested folder structure.
+## 💎 Completed Changes
 
-> [!WARNING]
-> I will use `tsup` for building as requested. Ensure you have Node.js and npm installed in your environment.
+### 1. Unified Types
+* **[types/index.ts](file:///d:/Projects/Portfolio/use-realtime/src/types/index.ts)**: Configured the `RealtimeClientOptions` interface to support custom WebSocket constructors (such as the Node.js `ws` library) and protocols.
 
-## Proposed Changes
+### 2. Standalone Vanilla Engine
+* **[RealtimeClient.ts](file:///d:/Projects/Portfolio/use-realtime/src/core/RealtimeClient.ts)**: Created a robust, fully decoupled TS class that runs anywhere. It orchestrates the raw connection lifecycle, customizable idle heartbeats, listener registries (Pub/Sub message and status callbacks), and exponential backoff reconnection loops.
 
-### Phase 1: Project Initialization
-Set up the base project structure and dependencies.
+### 3. Thin React Wrappers
+* **[useWebSocket.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/useWebSocket.ts)**: Refactored to delegate 100% of socket lifecycle and reconnection logic to a stable `RealtimeClient` ref, subscribing to message/status streams to update hook states.
+* **[RealtimeProvider.tsx](file:///d:/Projects/Portfolio/use-realtime/src/hooks/RealtimeProvider.tsx)**: Refactored to instantiate `RealtimeClient` dynamically on URL changes while utilizing a stable, persistent Set of subscribers, safeguarding downstream components from reconnection drops or context render cascades.
+* **[useRealtime.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/useRealtime.ts)**: Synchronized with the refactored context, retaining 100% backward compatibility.
 
-- [NEW] [package.json](file:///d:/Projects/Portfolio/use-realtime/package.json): Define scripts, peer dependencies (React), and dev dependencies (TypeScript, Vitest, tsup).
-- [NEW] [tsconfig.json](file:///d:/Projects/Portfolio/use-realtime/tsconfig.json): Strict TypeScript configuration.
-- [NEW] [vitest.config.ts](file:///d:/Projects/Portfolio/use-realtime/vitest.config.ts): Configure Vitest with `jsdom` and React Testing Library.
+### 4. Package Renaming & Exports
+* **[package.json](file:///d:/Projects/Portfolio/use-realtime/package.json)**: Changed the package name to `"universal-realtime"`.
+* **[index.ts](file:///d:/Projects/Portfolio/use-realtime/src/index.ts)**: Added `RealtimeClient` export to the primary entrypoint.
+* **Examples**: Updated all code examples under `docs/examples/` to use `'universal-realtime'`.
 
-### Phase 2: Utilities
-Core logic for reconnection and backoff.
+### 5. Extensive Test Suites
+* **[RealtimeClient.test.ts](file:///d:/Projects/Portfolio/use-realtime/tests/core/RealtimeClient.test.ts)**: Created a pure vanilla test suite confirming WebSocket connections, backend custom constructors, idle pings, heartbeat timeouts, and SSR safety.
+* **Sanity**: Verified that all 30 tests in the project pass successfully.
 
-#### [NEW] [backoff.ts](file:///d:/Projects/Portfolio/use-realtime/src/utils/backoff.ts)
-- Implement `getDelay(attempt, base, max)` function.
+---
 
-#### [NEW] [reconnect.ts](file:///d:/Projects/Portfolio/use-realtime/src/utils/reconnect.ts)
-- Implement a manager for the reconnection loop.
+## 📈 Verification Plan Summary
 
-### Phase 3: Hooks Implementation
-Developing hooks from simplest to most complex.
-
-#### [NEW] [useConnectionStatus.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/useConnectionStatus.ts)
-- Track online/offline status using window events.
-
-#### [NEW] [useOptimisticUpdate.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/useOptimisticUpdate.ts)
-- Manage optimistic state with rollback capability.
-
-#### [NEW] [useWebSocket.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/useWebSocket.ts)
-- WebSocket implementation with auto-reconnect and generic message support.
-
-#### [NEW] [useSSE.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/useSSE.ts)
-- Server-Sent Events implementation with auth header support (polyfill).
-
-#### [NEW] [usePresence.ts](file:///d:/Projects/Portfolio/use-realtime/src/hooks/usePresence.ts)
-- Built on top of `useWebSocket` for user presence tracking.
-
-### Phase 4: Exports and Types
-- [NEW] [src/types/index.ts](file:///d:/Projects/Portfolio/use-realtime/src/types/index.ts): Centralized types.
-- [NEW] [src/index.ts](file:///d:/Projects/Portfolio/use-realtime/src/index.ts): Barrel exports.
-
-### Phase 5: Testing
-Reach >90% line coverage using Vitest and `mock-socket`.
-- [NEW] `tests/hooks/*.test.ts`
-- [NEW] `tests/utils/*.test.ts`
-
-### Phase 6: Documentation and Examples
-- [NEW] [docs/examples/chat-app.md](file:///d:/Projects/Portfolio/use-realtime/docs/examples/chat-app.md)
-- [NEW] [docs/examples/live-dashboard.md](file:///d:/Projects/Portfolio/use-realtime/docs/examples/live-dashboard.md)
-- [NEW] [docs/examples/collaborative-editing.md](file:///d:/Projects/Portfolio/use-realtime/docs/examples/collaborative-editing.md)
-- [NEW] [README.md](file:///d:/Projects/Portfolio/use-realtime/README.md)
-
-## Verification Plan
-
-### Automated Tests
-- Run `npm test` to verify all hooks and utilities.
-- Target: >90% coverage.
-
-### Build Verification
-- Run `npm run build` to ensure `tsup` generates valid CJS, ESM, and d.ts files.
-- Verify tree-shakability.
+* **Automated Tests**:
+  * Run `npm run test` -> Checked: All 30 tests passed flawlessly in 2.12s.
+  * Run `npm run test:coverage` -> Checked: Overall statement coverage is at **94.82%**, with core logic at **93.57%**.
+* **Type Safety & Build**:
+  * Run `npm run lint` (`tsc --noEmit`) -> Checked: Zero errors.
+  * Run `npm run build` -> Checked: Generates tree-shakable ESM/CJS bundles under `dist/` totaling **~8.3 KB minified**.

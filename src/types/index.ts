@@ -1,3 +1,11 @@
+import type { ReactNode } from 'react';
+
+export interface HeartbeatOptions {
+  interval?: number; // default: 30000ms
+  timeout?: number;  // default: 5000ms
+  message?: string | object; // default: 'ping'
+}
+
 export interface UseWebSocketOptions<TMessage> {
   onMessage?: (message: TMessage) => void;
   onOpen?: (event: Event) => void;
@@ -10,7 +18,27 @@ export interface UseWebSocketOptions<TMessage> {
   protocols?: string | string[];
   /** Called before each message is set — use for filtering or transformation */
   filter?: (message: TMessage) => boolean;
+  /** Keep-alive heartbeat options or true/false to enable default heartbeat */
+  heartbeat?: HeartbeatOptions | boolean;
+  /** Custom WebSocket constructor, useful for Node.js environments (e.g. ws package) */
+  webSocketConstructor?: any;
 }
+
+export interface RealtimeClientOptions<TMessage = any> extends UseWebSocketOptions<TMessage> {}
+
+
+export interface RealtimeContextType<TMessage = any> {
+  sendMessage: (data: TMessage | string) => void;
+  connectionStatus: 'connecting' | 'open' | 'closing' | 'closed' | 'reconnecting';
+  subscribe: (listener: (msg: TMessage) => void) => () => void;
+}
+
+export interface RealtimeProviderProps<TMessage = any> {
+  url: string | null;
+  options?: UseWebSocketOptions<TMessage>;
+  children: ReactNode;
+}
+
 
 export interface UseWebSocketReturn<TMessage> {
   lastMessage: TMessage | null;

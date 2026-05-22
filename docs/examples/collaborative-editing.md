@@ -4,7 +4,7 @@ This example demonstrates how to implement an optimistic editor update utilizing
 
 ```tsx
 import React, { useState } from 'react';
-import { useOptimisticUpdate } from 'use-realtime';
+import { useOptimisticUpdate } from 'universal-realtime';
 
 interface DocumentContent {
   text: string;

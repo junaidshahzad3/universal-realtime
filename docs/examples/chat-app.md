@@ -4,7 +4,7 @@ A full-featured chat application with user presence and real-time messaging usin
 
 ```tsx
 import React, { useState } from 'react';
-import { useWebSocket, usePresence } from 'use-realtime';
+import { useWebSocket, usePresence } from 'universal-realtime';
 
 export const ChatApp = () => {
   const [text, setText] = useState('');
