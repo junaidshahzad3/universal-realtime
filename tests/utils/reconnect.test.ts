@@ -60,4 +60,27 @@ describe('ReconnectManager', () => {
     expect(onReconnect).not.toHaveBeenCalled();
     expect(manager.currentAttempt).toBe(0);
   });
+
+  it('supports randomized jitter option', () => {
+    const onReconnect = vi.fn();
+    const manager = new ReconnectManager({
+      maxAttempts: 1,
+      baseInterval: 2000,
+      maxInterval: 5000,
+      jitter: true,
+      onReconnect,
+      onFailed: vi.fn(),
+    });
+
+    manager.start();
+    
+    // With jitter = true and base 2000, actual delay will be in [1500, 2500]ms range.
+    // At 1499ms, it should not have triggered.
+    vi.advanceTimersByTime(1499);
+    expect(onReconnect).not.toHaveBeenCalled();
+
+    // At 2501ms, it must have triggered.
+    vi.advanceTimersByTime(1002);
+    expect(onReconnect).toHaveBeenCalled();
+  });
 });

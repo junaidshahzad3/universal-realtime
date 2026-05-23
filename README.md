@@ -73,6 +73,40 @@ const client = new RealtimeClient('ws://api.example.com', {
 });
 ```
 
+### Advanced Core Features
+
+#### 1. Dynamic Authentication Handshake
+You can supply an asynchronous `auth` parameter to dynamically resolve authentication credentials or tokens before opening a connection. The returned key-value pairs are automatically appended as connection query parameters:
+
+```typescript
+const client = new RealtimeClient('ws://api.example.com', {
+  auth: async () => {
+    const token = await fetchSecureToken();
+    return { token, clientVersion: '1.1.0' };
+  }
+});
+```
+
+#### 2. Automatic Offline Event Queuing
+If the client is offline or re-establishing a connection, any message sent via `sendMessage()` is automatically cached in an internal FIFO queue and flushed in order the moment a connection is established.
+
+#### 3. Reconnection Jitter
+Avoid "thundering herd" server bottlenecks. Toggle randomized ±25% reconnection jitter to stagger client reconnection attempts:
+
+```typescript
+const client = new RealtimeClient('ws://api.example.com', {
+  reconnect: true,
+  reconnectJitter: true, // staggered reconnection delays
+});
+```
+
+#### 4. Raw Connection Passthrough (`unwrap`)
+Access the raw, typed underlying WebSocket instance safe and casted:
+
+```typescript
+const rawSocket = client.unwrap<WebSocket>();
+```
+
 ---
 
 ## React Hooks API (Thin Wrappers)
