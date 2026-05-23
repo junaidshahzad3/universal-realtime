@@ -4,6 +4,7 @@ interface ReconnectOptions {
   maxAttempts: number;
   baseInterval: number;
   maxInterval: number;
+  jitter?: boolean;
   onReconnect: (attempt: number) => void;
   onFailed: () => void;
 }
@@ -42,7 +43,8 @@ export class ReconnectManager {
     const delay = getDelay(
       this.attempt,
       this.options.baseInterval,
-      this.options.maxInterval
+      this.options.maxInterval,
+      this.options.jitter
     );
 
     this.timer = setTimeout(() => {

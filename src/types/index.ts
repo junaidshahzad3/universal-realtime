@@ -22,6 +22,12 @@ export interface UseWebSocketOptions<TMessage> {
   heartbeat?: HeartbeatOptions | boolean;
   /** Custom WebSocket constructor, useful for Node.js environments (e.g. ws package) */
   webSocketConstructor?: any;
+  /** Enable randomized jitter factor (±25%) to stagger reconnect attempts and prevent connection storms */
+  jitter?: boolean;
+  /** Enable message queueing when client is offline, automatically replaying unsent messages on re-connection */
+  bufferOfflineMessages?: boolean;
+  /** Async or sync hook to fetch auth tokens or query parameters dynamically before handshaking */
+  auth?: () => Promise<Record<string, string> | string> | Record<string, string> | string;
 }
 
 export interface RealtimeClientOptions<TMessage = any> extends UseWebSocketOptions<TMessage> {}

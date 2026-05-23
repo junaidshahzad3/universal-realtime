@@ -184,4 +184,93 @@ describe('RealtimeClient core class', () => {
 
     vi.stubGlobal('window', originalWindow);
   });
+
+  it('unwraps the raw underlying WebSocket client', async () => {
+    const url = 'ws://localhost:6006';
+    const mockServer = new Server(url);
+    const client = new RealtimeClient<string>(url);
+
+    // Wait for open
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (client.getStatus() === 'open') {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 5);
+    });
+
+    const rawWs = client.unwrap<MockWebSocket>();
+    expect(rawWs).toBeInstanceOf(MockWebSocket);
+    expect(client.getWebSocket()).toBe(rawWs);
+
+    client.disconnect();
+    mockServer.stop();
+  });
+
+  it('queues messages offline and flushes them once connected', async () => {
+    const url = 'ws://localhost:6007';
+    const mockServer = new Server(url);
+
+    let serverReceived: string[] = [];
+    mockServer.on('connection', (socket) => {
+      socket.on('message', (data) => {
+        serverReceived.push(data as string);
+      });
+    });
+
+    const client = new RealtimeClient<string>(url);
+    // Send messages immediately before connection handshake completes
+    client.sendMessage('buffered-msg-1');
+    client.sendMessage('buffered-msg-2');
+
+    // Wait for connection to open and flush
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (serverReceived.length === 2) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 5);
+    });
+
+    expect(serverReceived).toContain('buffered-msg-1');
+    expect(serverReceived).toContain('buffered-msg-2');
+
+    client.disconnect();
+    mockServer.stop();
+  });
+
+  it('executes dynamic async auth callback and appends query params', async () => {
+    const url = 'ws://localhost:6008';
+    const mockServer = new Server(url);
+
+    let receivedUrl = '';
+    mockServer.on('connection', (socket) => {
+      receivedUrl = socket.url;
+    });
+
+    const client = new RealtimeClient<string>(url, {
+      auth: async () => {
+        return { access_token: 'secret-token-xyz', user_role: 'admin' };
+      }
+    });
+
+    // Wait for open
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (client.getStatus() === 'open') {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 5);
+    });
+
+    const parsedUrl = new URL(receivedUrl);
+    expect(parsedUrl.searchParams.get('access_token')).toBe('secret-token-xyz');
+    expect(parsedUrl.searchParams.get('user_role')).toBe('admin');
+
+    client.disconnect();
+    mockServer.stop();
+  });
 });

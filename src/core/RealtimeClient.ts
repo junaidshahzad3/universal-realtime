@@ -21,6 +21,9 @@ export class RealtimeClient<TMessage = any> {
   
   private connectionStatus: ConnectionStatus = 'closed';
   private reconnectCount = 0;
+  
+  // NEW: Offline message buffer queue
+  private offlineQueue: Array<TMessage | string> = [];
 
   constructor(url: string | null, options?: RealtimeClientOptions<TMessage>) {
     this.url = url;
@@ -43,6 +46,7 @@ export class RealtimeClient<TMessage = any> {
       maxAttempts: this.options.reconnectAttempts ?? 10,
       baseInterval: this.options.reconnectInterval ?? 1000,
       maxInterval: this.options.maxReconnectInterval ?? 30000,
+      jitter: this.options.jitter !== false,
       onReconnect: (attempt) => {
         this.reconnectCount = attempt + 1;
         this.setStatus('reconnecting');
@@ -56,7 +60,7 @@ export class RealtimeClient<TMessage = any> {
     this.connect();
   }
 
-  public connect() {
+  public async connect() {
     if (this.ws) {
       this.disconnect();
     }
@@ -65,13 +69,33 @@ export class RealtimeClient<TMessage = any> {
 
     this.setStatus('connecting');
     
+    let connectionUrl = this.url!;
+
+    // Resolve dynamic auth callback/tokens if present
+    if (this.options.auth) {
+      try {
+        const authData = await this.options.auth();
+        const urlObj = new URL(connectionUrl);
+        if (typeof authData === 'string') {
+          urlObj.searchParams.set('token', authData);
+        } else if (typeof authData === 'object' && authData !== null) {
+          Object.entries(authData).forEach(([key, val]) => {
+            urlObj.searchParams.set(key, String(val));
+          });
+        }
+        connectionUrl = urlObj.toString();
+      } catch (err) {
+        console.error('[RealtimeClient] Failed to execute dynamic auth hook:', err);
+      }
+    }
+    
     // Choose WebSocket constructor (custom or standard browser API)
     const WSConstructor = this.options.webSocketConstructor || (typeof WebSocket !== 'undefined' ? WebSocket : null);
     if (!WSConstructor) {
       throw new Error('WebSocket constructor is not available. Pass a custom constructor via options.webSocketConstructor if running in Node.js.');
     }
 
-    const wsInstance = new WSConstructor(this.url, this.options.protocols);
+    const wsInstance = new WSConstructor(connectionUrl, this.options.protocols);
     this.ws = wsInstance;
 
     wsInstance.onopen = (event: Event) => {
@@ -82,6 +106,9 @@ export class RealtimeClient<TMessage = any> {
       this.reconnectManager?.stop();
       this.startHeartbeat();
       this.options.onOpen?.(event);
+      
+      // Auto-flush offline buffered queues
+      this.flushOfflineQueue();
     };
 
     wsInstance.onmessage = (event: MessageEvent) => {
@@ -151,7 +178,28 @@ export class RealtimeClient<TMessage = any> {
     if (this.ws?.readyState === readyStateOpen) {
       const payload = typeof data === 'string' ? data : JSON.stringify(data);
       this.ws.send(payload);
+    } else if (this.options.bufferOfflineMessages !== false) {
+      console.log('[RealtimeClient] Queueing message because connection is offline.');
+      this.offlineQueue.push(data);
     }
+  }
+
+  private flushOfflineQueue() {
+    if (this.offlineQueue.length === 0) return;
+    console.log(`[RealtimeClient] Flushing ${this.offlineQueue.length} offline buffered messages.`);
+    while (this.offlineQueue.length > 0) {
+      const msg = this.offlineQueue.shift();
+      if (msg !== undefined) {
+        this.sendMessage(msg);
+      }
+    }
+  }
+
+  /**
+   * Returns the raw underlying WebSocket client instance, cast to target type T.
+   */
+  public unwrap<T = WebSocket>(): T | null {
+    return this.ws as unknown as T;
   }
 
   public subscribe(listener: (msg: TMessage) => void): () => void {
