@@ -1,4 +1,4 @@
-# universal-realtime 📡
+# universal-realtime
 
 A premium, lightweight, zero-dependency real-time engine and hooks package for JavaScript, TypeScript, Node.js, and React. 
 
@@ -6,7 +6,7 @@ A premium, lightweight, zero-dependency real-time engine and hooks package for J
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 * **Framework-Agnostic Core**: Build with `RealtimeClient` in vanilla JS/TS, Node.js (via custom WebSocket constructors), Angular, Vue, Svelte, or SSR environments (Next.js/Remix safe).
 * **Multiplexed React Hooks**: Streamline app performance using `RealtimeProvider` and `useRealtime` to share a single, robust connection across many components with zero React Context render cascades.
@@ -16,7 +16,7 @@ A premium, lightweight, zero-dependency real-time engine and hooks package for J
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install universal-realtime
@@ -24,7 +24,7 @@ npm install universal-realtime
 
 ---
 
-## 🔌 Framework-Agnostic Engine (`RealtimeClient`)
+## Framework-Agnostic Engine (`RealtimeClient`)
 
 Perfect for pure JS/TS scripts, backend Node.js, or any non-React frameworks.
 
@@ -75,7 +75,7 @@ const client = new RealtimeClient('ws://api.example.com', {
 
 ---
 
-## 🪝 React Hooks API (Thin Wrappers)
+## React Hooks API (Thin Wrappers)
 
 ### 1. Central Connection Provider (`RealtimeProvider` + `useRealtime`)
 Multiplexes all real-time events over **exactly 1 WebSocket connection** to reduce client resource load and prevent global React Context render cascades.
@@ -173,6 +173,6 @@ function TodoList({ initialTodos }) {
 
 ---
 
-## 📄 License
+## License
 MIT
 

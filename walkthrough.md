@@ -4,7 +4,7 @@ The `use-realtime` library has been successfully upgraded to a decoupled, **clas
 
 ---
 
-## 🚀 Key Improvements & Architectural Highlights
+## Key Improvements & Architectural Highlights
 
 ### 1. Framework-Agnostic Core (`RealtimeClient`)
 * **Total Decoupling**: All WebSocket connection, reconnection (exponential backoff), and heartbeat logic has been completely extracted from React hooks and encapsulated in a standard TypeScript class `RealtimeClient`.
@@ -23,7 +23,7 @@ The `use-realtime` library has been successfully upgraded to a decoupled, **clas
 
 ---
 
-## 📊 Coverage Report
+## Coverage Report
 
 ```
 -------------------|---------|----------|---------|---------|-------------------
@@ -48,7 +48,7 @@ All files          |   94.82 |    75.78 |   91.66 |   94.82 |
 
 ---
 
-## 🛠 File Structure & Project Architecture
+## File Structure & Project Architecture
 
 ```
 use-realtime/
@@ -79,7 +79,7 @@ use-realtime/
 
 ---
 
-## 📈 Quality Assurance Summary
+## Quality Assurance Summary
 
 1. **Type Safety**: Running `npm run lint` yields clean compilation with **zero type errors**.
 2. **Bundle Quality**: Running `npm run build` minifies and clean-compiles ESM/CJS bundles under `dist/` with a microscopic size of **~8 KB**, supporting complete tree-shaking.

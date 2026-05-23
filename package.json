@@ -1,6 +1,6 @@
 {
   "name": "universal-realtime",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Ready-to-use React hooks for real-time and live data (WebSocket, SSE, Presence).",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
