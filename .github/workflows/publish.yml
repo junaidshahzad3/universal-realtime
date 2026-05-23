@@ -42,7 +42,7 @@ jobs:
             echo "Version $CURRENT_VERSION is already published on npm. Skipping publish step gracefully."
           else
             echo "Version $CURRENT_VERSION is new. Publishing to npm registry..."
-            npm publish --provenance
+            npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
