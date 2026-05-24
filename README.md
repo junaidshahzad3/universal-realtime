@@ -82,7 +82,7 @@ You can supply an asynchronous `auth` parameter to dynamically resolve authentic
 const client = new RealtimeClient('ws://api.example.com', {
   auth: async () => {
     const token = await fetchSecureToken();
-    return { token, clientVersion: '1.2.0' };
+    return { token, clientVersion: '1.3.0' };
   }
 });
 ```

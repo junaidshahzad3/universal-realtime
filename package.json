@@ -1,6 +1,6 @@
 {
   "name": "universal-realtime",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Premium, lightweight, isomorphic full-stack real-time engine and hooks framework for React, Node.js, and browser environments. Features resilient WebSocket auto-reconnections, exponential backoff with jitter, offline event buffers, active pings, presence rooms, and Server-Sent Events.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -55,6 +55,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tsup": "^7.1.0",
+    "tsx": "^4.11.0",
     "typescript": "^5.1.0",
     "vitest": "^0.34.0",
     "ws": "^8.17.0"

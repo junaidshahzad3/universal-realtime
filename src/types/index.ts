@@ -28,6 +28,8 @@ export interface UseWebSocketOptions<TMessage> {
   bufferOfflineMessages?: boolean;
   /** Async or sync hook to fetch auth tokens or query parameters dynamically before handshaking */
   auth?: () => Promise<Record<string, string> | string> | Record<string, string> | string;
+  /** Enable diagnostic logging for all connection events, pings/pongs, and buffering activities */
+  debug?: boolean;
 }
 
 export interface RealtimeClientOptions<TMessage = any> extends UseWebSocketOptions<TMessage> {}

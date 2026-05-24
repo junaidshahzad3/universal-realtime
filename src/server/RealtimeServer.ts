@@ -13,6 +13,7 @@ export interface RealtimeServerOptions {
   heartbeatIntervalMs?: number; // Active ping frequency
   sessionTimeoutMs?: number; // Offline session buffer expiration
   enablePresence?: boolean;
+  debug?: boolean;
 }
 
 export class RealtimeServer extends EventEmitter {
@@ -33,10 +34,18 @@ export class RealtimeServer extends EventEmitter {
     }
   >();
 
+  private log(message: string, ...args: any[]) {
+    if (this.options.debug) {
+      console.log(`[RealtimeServer][${new Date().toISOString()}] ${message}`, ...args);
+    }
+  }
+
   constructor(private options: RealtimeServerOptions = {}) {
     super();
 
-    const wssOptions: ServerOptions = {};
+    const wssOptions: ServerOptions = {
+      backlog: 2000, // Staggers connection handshakes during concurrency spikes
+    };
     if (options.server) {
       wssOptions.server = options.server;
     } else if (options.port) {
@@ -88,6 +97,7 @@ export class RealtimeServer extends EventEmitter {
         if (this.options.validateAuth) {
           const isValid = await this.options.validateAuth(token, queryParams, req.headers);
           if (!isValid) {
+            this.log('Handshake dynamic authentication validation FAILED for token:', token);
             this.emit('auth:failed', socket, req);
             socket.close(4401, 'Unauthorized');
             this.socketMetadata.delete(socket);
@@ -97,6 +107,7 @@ export class RealtimeServer extends EventEmitter {
 
         // 4. Set final active session metadata
         const sessionId = clientSessionId || `session_${Math.random().toString(36).substring(2)}`;
+        this.log('Client connected. Handshake assigned SessionId:', sessionId, 'ClientId:', clientId, 'RoomId:', roomId);
         const meta = this.socketMetadata.get(socket);
         if (meta) {
           meta.sessionId = sessionId;
@@ -111,6 +122,7 @@ export class RealtimeServer extends EventEmitter {
           const session = this.sessionStore.getOrCreateSession(sessionId, clientId);
           const bufferedMessages = this.sessionStore.flushBuffer(sessionId);
           if (bufferedMessages.length > 0) {
+            this.log('Session offline buffer hit! Replaying messages directly to socket, count:', bufferedMessages.length);
             for (const msg of bufferedMessages) {
               socket.send(JSON.stringify(msg));
             }
@@ -157,6 +169,7 @@ export class RealtimeServer extends EventEmitter {
    */
   private handleClientMessage(socket: WebSocket, message: any): void {
     const meta = this.socketMetadata.get(socket);
+    this.log('Incoming client message frame:', message);
 
     if (this.options.enablePresence !== false && message && typeof message === 'object') {
       const type = message.type;
@@ -175,6 +188,7 @@ export class RealtimeServer extends EventEmitter {
           this.presenceRooms.set(roomId, room);
         }
 
+        this.log('Client joining presence room:', roomId, 'User identity:', user);
         room.join(user, socket);
         this.emit('presence:join', roomId, user);
         return;
@@ -194,6 +208,7 @@ export class RealtimeServer extends EventEmitter {
 
     if (meta) {
       const { sessionId, clientId, roomId, presenceUser } = meta;
+      this.log('Client socket disconnected. SessionId:', sessionId, 'RoomId:', roomId, 'CloseCode:', code);
 
       // Handle presence leave automatically
       if (this.options.enablePresence !== false && roomId) {
@@ -227,12 +242,14 @@ export class RealtimeServer extends EventEmitter {
     // Check if the session is currently connected online
     for (const [socket, meta] of this.socketMetadata.entries()) {
       if (meta.sessionId === sessionId && socket.readyState === WebSocket.OPEN) {
+        this.log('Sending message to active online session:', sessionId);
         socket.send(JSON.stringify(message));
         return true;
       }
     }
 
     // Client is offline: buffer the message in SessionStore
+    this.log('Session is currently offline. Buffering server message in SessionStore. SessionId:', sessionId);
     const session = this.sessionStore.getOrCreateSession(sessionId, '');
     if (session) {
       this.sessionStore.bufferMessage(sessionId, message);
@@ -282,8 +299,10 @@ export class RealtimeServer extends EventEmitter {
   private startHeartbeatLoop(): void {
     const interval = this.options.heartbeatIntervalMs || 30000;
     this.heartbeatTimer = setInterval(() => {
+      this.log('Executing active heartbeat ping check...');
       for (const [socket, meta] of this.socketMetadata.entries()) {
         if (!meta.isAlive) {
+          this.log('Active keep-alive timeout! Terminating inactive client socket. SessionId:', meta.sessionId);
           this.emit('heartbeat:timeout', socket, meta.sessionId);
           socket.terminate();
           continue;
@@ -291,6 +310,7 @@ export class RealtimeServer extends EventEmitter {
 
         meta.isAlive = false;
         if (socket.readyState === WebSocket.OPEN) {
+          this.log('Sending WebSocket ping packet to client socket. SessionId:', meta.sessionId);
           socket.ping();
         }
       }

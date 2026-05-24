@@ -31,6 +31,12 @@ export class RealtimeClient<TMessage = any> {
     this.initialize();
   }
 
+  private log(message: string, ...args: any[]) {
+    if (this.options.debug) {
+      console.log(`[RealtimeClient][${new Date().toISOString()}] ${message}`, ...args);
+    }
+  }
+
   private initialize() {
     if (typeof window === 'undefined' && !this.options.webSocketConstructor) {
       // Gracefully bypass in SSR environment if no constructor is provided
@@ -68,6 +74,7 @@ export class RealtimeClient<TMessage = any> {
     if (!this.url) return;
 
     this.setStatus('connecting');
+    this.log('Connecting client to URL:', this.url);
     
     let connectionUrl = this.url!;
 
@@ -102,6 +109,7 @@ export class RealtimeClient<TMessage = any> {
       if (this.ws !== wsInstance) return;
 
       this.setStatus('open');
+      this.log('Connection successfully established.');
       this.reconnectCount = 0;
       this.reconnectManager?.stop();
       this.startHeartbeat();
@@ -115,6 +123,7 @@ export class RealtimeClient<TMessage = any> {
       if (this.ws !== wsInstance) return;
 
       this.resetHeartbeatTimeout();
+      this.log('Incoming message payload received:', event.data);
       
       let parsedData: any;
       try {
@@ -139,6 +148,7 @@ export class RealtimeClient<TMessage = any> {
 
     wsInstance.onerror = (event: Event) => {
       if (this.ws !== wsInstance) return;
+      this.log('WebSocket interface error:', event);
       this.options.onError?.(event);
     };
 
@@ -147,6 +157,7 @@ export class RealtimeClient<TMessage = any> {
 
       this.stopHeartbeat();
       this.setStatus('closed');
+      this.log('Connection closed. Code:', event.code, 'Reason:', event.reason);
       this.options.onClose?.(event);
 
       if (this.options.reconnect !== false && this.url) {
@@ -157,6 +168,7 @@ export class RealtimeClient<TMessage = any> {
   }
 
   public disconnect() {
+    this.log('Disconnect requested. Cleaning connection and stopping reconnects.');
     this.stopHeartbeat();
     this.reconnectManager?.stop();
 
@@ -177,16 +189,17 @@ export class RealtimeClient<TMessage = any> {
     const readyStateOpen = typeof WebSocket !== 'undefined' ? WebSocket.OPEN : 1;
     if (this.ws?.readyState === readyStateOpen) {
       const payload = typeof data === 'string' ? data : JSON.stringify(data);
+      this.log('Sending structured payload:', payload);
       this.ws.send(payload);
     } else if (this.options.bufferOfflineMessages !== false) {
-      console.log('[RealtimeClient] Queueing message because connection is offline.');
+      this.log('Socket is offline. Buffering outgoing message:', data);
       this.offlineQueue.push(data);
     }
   }
 
   private flushOfflineQueue() {
     if (this.offlineQueue.length === 0) return;
-    console.log(`[RealtimeClient] Flushing ${this.offlineQueue.length} offline buffered messages.`);
+    this.log(`Flushing ${this.offlineQueue.length} offline buffered messages.`);
     while (this.offlineQueue.length > 0) {
       const msg = this.offlineQueue.shift();
       if (msg !== undefined) {
