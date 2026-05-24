@@ -1,6 +1,6 @@
 # Class-Based Decoupled Architecture Walkthrough — use-realtime
 
-The `use-realtime` library has been successfully upgraded to a decoupled, **class-based, framework-agnostic architecture** and published to the npm registry as **version 1.1.0** (with fully emoji-free, premium documentation). We created a robust, standalone engine `RealtimeClient` that handles all WebSocket connections, heartbeat keep-alives, and reconnection logic natively in vanilla TypeScript, while refactoring the React hooks to serve as thin, high-performance wrappers.
+The `use-realtime` library has been successfully upgraded to a decoupled, **class-based, framework-agnostic architecture** and published to the npm registry as **version 1.2.0** (with fully emoji-free, premium documentation). We created a robust, standalone engine `RealtimeClient` that handles all WebSocket connections, heartbeat keep-alives, and reconnection logic natively in vanilla TypeScript, while refactoring the React hooks to serve as thin, high-performance wrappers.
 
 ---
 
