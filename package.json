@@ -1,7 +1,7 @@
 {
   "name": "universal-realtime",
   "version": "1.2.0",
-  "description": "Ready-to-use React hooks for real-time and live data (WebSocket, SSE, Presence).",
+  "description": "Premium, lightweight, isomorphic full-stack real-time engine and hooks framework for React, Node.js, and browser environments. Features resilient WebSocket auto-reconnections, exponential backoff with jitter, offline event buffers, active pings, presence rooms, and Server-Sent Events.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -10,6 +10,11 @@
       "require": "./dist/index.js",
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "require": "./dist/server.js",
+      "import": "./dist/server.mjs",
+      "types": "./dist/server.d.ts"
     }
   },
   "files": [
@@ -61,8 +66,27 @@
     "sse",
     "realtime",
     "presence",
-    "optimistic-update"
+    "optimistic-update",
+    "fullstack",
+    "isomorphic",
+    "websocket-server",
+    "heartbeat",
+    "backoff-jitter",
+    "offline-queue",
+    "message-replay",
+    "server-sent-events",
+    "presence-rooms",
+    "typescript",
+    "nodejs"
   ],
   "author": "Junaid Shahzad",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/junaidshahzad3/universal-realtime.git"
+  },
+  "bugs": {
+    "url": "https://github.com/junaidshahzad3/universal-realtime/issues"
+  },
+  "homepage": "https://github.com/junaidshahzad3/universal-realtime#readme"
 }
