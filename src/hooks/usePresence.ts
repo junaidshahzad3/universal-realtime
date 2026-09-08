@@ -13,13 +13,17 @@ export function usePresence(options: UsePresenceOptions): UsePresenceReturn {
 
   const { lastMessage, sendMessage, connectionStatus } = useWebSocket<{
     type: 'join' | 'leave' | 'sync';
+    roomId?: string;
     user?: PresenceUser;
     users?: PresenceUser[];
   }>(options.wsUrl, {
     onOpen: () => {
-      // Send join message with room info
+      // Send join message with room info. roomId must travel on the frame:
+      // the server scopes presence by it and uses it again to remove the user
+      // on disconnect.
       sendMessage({
         type: 'join',
+        roomId: options.roomId,
         user: {
           ...options.identity,
           joinedAt: new Date(),

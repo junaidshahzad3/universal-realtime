@@ -277,4 +277,98 @@ describe('RealtimeServer module', () => {
     client1.disconnect();
     await server.close();
   });
+
+  it('removes a user from the default room on disconnect when no roomId was supplied', async () => {
+    // Regression: join fell back to the 'default' room without writing that room
+    // back to the socket metadata, so the disconnect handler's `if (roomId)`
+    // guard skipped cleanup and the user stayed in the room forever.
+    const port = 8095;
+    const server = new RealtimeServer({ port, enablePresence: true });
+
+    const client = new RealtimeClient(`ws://localhost:${port}`, {
+      webSocketConstructor: WebSocket as any,
+    });
+
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (client.getStatus() === 'open') {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 5);
+    });
+
+    client.sendMessage({ type: 'join', user: { id: 'ghost', metadata: { name: 'Ghost' } } });
+
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (server.getRoomUsers('default').length === 1) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 5);
+    });
+
+    expect(server.getRoomUsers('default').map((u) => u.id)).toContain('ghost');
+
+    client.disconnect();
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 120));
+    expect(server.getRoomUsers('default')).toHaveLength(0);
+
+    await server.close();
+  });
+
+  it('scopes presence by a roomId supplied on the join frame', async () => {
+    // Regression: the room was only ever read from the connection query string,
+    // so `usePresence({ roomId })` — which sends it on the frame — collapsed
+    // every caller into a single shared room.
+    const port = 8096;
+    const server = new RealtimeServer({ port, enablePresence: true });
+
+    const mkClient = () =>
+      new RealtimeClient(`ws://localhost:${port}`, {
+        webSocketConstructor: WebSocket as any,
+      });
+
+    const waitOpen = (c: ReturnType<typeof mkClient>) =>
+      new Promise<void>((resolve) => {
+        const interval = setInterval(() => {
+          if (c.getStatus() === 'open') {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 5);
+      });
+
+    const alice = mkClient();
+    const bob = mkClient();
+    await Promise.all([waitOpen(alice), waitOpen(bob)]);
+
+    alice.sendMessage({ type: 'join', roomId: 'lobby', user: { id: 'alice' } });
+    bob.sendMessage({ type: 'join', roomId: 'kitchen', user: { id: 'bob' } });
+
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (server.getRoomUsers('lobby').length === 1 && server.getRoomUsers('kitchen').length === 1) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 5);
+    });
+
+    // Each user lands in their own room, and nothing leaks into 'default'.
+    expect(server.getRoomUsers('lobby').map((u) => u.id)).toEqual(['alice']);
+    expect(server.getRoomUsers('kitchen').map((u) => u.id)).toEqual(['bob']);
+    expect(server.getRoomUsers('default')).toHaveLength(0);
+
+    // Leaving one room must not disturb the other.
+    alice.disconnect();
+    await new Promise<void>((resolve) => setTimeout(resolve, 120));
+    expect(server.getRoomUsers('lobby')).toHaveLength(0);
+    expect(server.getRoomUsers('kitchen')).toHaveLength(1);
+
+    bob.disconnect();
+    await server.close();
+  });
 });

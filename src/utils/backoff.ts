@@ -11,9 +11,13 @@ export function getDelay(attempt: number, base: number, max: number, jitter = fa
   const constrainedDelay = Math.min(delay, max);
 
   if (jitter) {
-    // Apply ±25% randomized jitter to stagger reconnections
+    // Apply ±25% randomized jitter to stagger reconnections.
+    //
+    // Re-clamp afterwards: jitter used to be applied to the already-capped
+    // value and returned directly, so roughly half of all delays landed above
+    // `max` (up to 1.25x it) and the cap did not hold.
     const jitterFactor = 0.75 + Math.random() * 0.5;
-    return Math.round(constrainedDelay * jitterFactor);
+    return Math.min(Math.round(constrainedDelay * jitterFactor), max);
   }
 
   return constrainedDelay;

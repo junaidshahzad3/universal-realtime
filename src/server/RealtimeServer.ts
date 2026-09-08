@@ -176,10 +176,17 @@ export class RealtimeServer extends EventEmitter {
       
       if (type === 'join' && message.user) {
         const user = message.user as PresenceUser;
-        const roomId = meta?.roomId || 'default';
-        
+        // Room precedence: explicit roomId on the join frame, then the roomId
+        // supplied as a connection query parameter, then the shared default room.
+        const roomId =
+          (typeof message.roomId === 'string' && message.roomId) || meta?.roomId || 'default';
+
         if (meta) {
           meta.presenceUser = user;
+          // Persist the resolved room. handleClientDisconnect reads meta.roomId to
+          // remove the user on leave, so without this a client that connected
+          // without a roomId would stay in the room forever.
+          meta.roomId = roomId;
         }
 
         let room = this.presenceRooms.get(roomId);
