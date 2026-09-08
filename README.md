@@ -6,9 +6,12 @@ A premium, lightweight, zero-dependency real-time engine and hooks package for J
 
 ---
 
+> **Try it without installing anything:** [**Reconnect Console →**](https://universal-realtime.vercel.app)  
+> Cut the connection and watch the backoff, the offline queue and presence rooms react.
+
 ## Key Features
 
-* **Framework-Agnostic Core**: Build with `RealtimeClient` in vanilla JS/TS, Node.js (via custom WebSocket constructors), Angular, Vue, Svelte, or SSR environments (Next.js/Remix safe).
+* **Framework-Agnostic Core**: Build with `RealtimeClient` in vanilla JS/TS, Node.js (via custom WebSocket constructors), Angular, Vue, Svelte, or SSR environments (Next.js/Remix safe). Import it from `universal-realtime/client`, which pulls in no React at all — React is only needed for the hooks on the root entry.
 * **Multiplexed React Hooks**: Streamline app performance using `RealtimeProvider` and `useRealtime` to share a single, robust connection across many components with zero React Context render cascades.
 * **Traffic-Aware Heartbeats**: Minimize unnecessary bandwidth with keep-alive heartbeats that only ping when the websocket connection is idle.
 * **Auto-Reconnection**: Resilient reconnection using a custom exponential backoff manager.
@@ -28,8 +31,11 @@ npm install universal-realtime
 
 Perfect for pure JS/TS scripts, backend Node.js, or any non-React frameworks.
 
+Import from the `/client` subpath. It contains only the core engine and never
+imports React, so it works in projects that don't have React installed:
+
 ```typescript
-import { RealtimeClient } from 'universal-realtime';
+import { RealtimeClient } from 'universal-realtime/client';
 
 // Instantiates client (gracefully safe in SSR)
 const client = new RealtimeClient('ws://api.example.com', {
@@ -65,7 +71,7 @@ client.disconnect();
 In backend Node.js environments (where native `WebSocket` might not be globally available), pass a custom WebSocket constructor (e.g. from the `ws` package):
 
 ```typescript
-import { RealtimeClient } from 'universal-realtime';
+import { RealtimeClient } from 'universal-realtime/client';
 import WebSocket from 'ws'; // node WebSocket library
 
 const client = new RealtimeClient('ws://api.example.com', {

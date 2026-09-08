@@ -224,7 +224,14 @@ export class RealtimeClient<TMessage = any> {
 
   public subscribeStatus(listener: (status: ConnectionStatus) => void): () => void {
     this.statusListeners.add(listener);
-    listener(this.connectionStatus);
+    // Prime the listener with the current status. Guarded like setStatus does:
+    // a listener that throws must not propagate out of subscribeStatus and
+    // break the caller that was merely subscribing.
+    try {
+      listener(this.connectionStatus);
+    } catch (err) {
+      console.error('Error in RealtimeClient status listener:', err);
+    }
     return () => {
       this.statusListeners.delete(listener);
     };
