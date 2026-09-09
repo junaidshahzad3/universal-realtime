@@ -1,21 +1,23 @@
 # universal-realtime
 
-A premium, lightweight, zero-dependency real-time engine and hooks package for JavaScript, TypeScript, Node.js, and React. 
+[![npm](https://img.shields.io/npm/v/universal-realtime?color=%23c2410c)](https://www.npmjs.com/package/universal-realtime)
+[![bundle](https://img.shields.io/badge/core-~5%20KB%20min-informational)](https://www.npmjs.com/package/universal-realtime)
+[![dependencies](https://img.shields.io/badge/runtime%20deps-0-success)](https://www.npmjs.com/package/universal-realtime)
+[![tests](https://img.shields.io/badge/tests-77%20passing-success)](#testing)
+[![license](https://img.shields.io/npm/l/universal-realtime)](LICENSE)
 
-`universal-realtime` delivers a high-performance framework-agnostic client (`RealtimeClient`) alongside ultra-optimized React wrappers. It provides out-of-the-box support for auto-reconnection (exponential backoff), customizable heartbeats (ping/pong), Server-Sent Events, user presence, and optimistic UI updates.
+A lightweight, zero-dependency real-time engine for JavaScript, TypeScript, Node.js and React.
 
----
+Connections drop — on trains, in lifts, when a load balancer recycles. `universal-realtime`
+handles the recovery so your app doesn't have to: auto-reconnection with jittered
+exponential backoff, traffic-aware heartbeats, an offline send queue, presence rooms,
+Server-Sent Events, and optimistic UI updates.
 
-> **Try it without installing anything:** [**Reconnect Console →**](https://universal-realtime.vercel.app)  
-> Cut the connection and watch the backoff, the offline queue and presence rooms react.
+### ▶︎ [Try it in your browser — no install](https://universal-realtime.vercel.app)
 
-## Key Features
-
-* **Framework-Agnostic Core**: Build with `RealtimeClient` in vanilla JS/TS, Node.js (via custom WebSocket constructors), Angular, Vue, Svelte, or SSR environments (Next.js/Remix safe). Import it from `universal-realtime/client`, which pulls in no React at all — React is only needed for the hooks on the root entry.
-* **Multiplexed React Hooks**: Streamline app performance using `RealtimeProvider` and `useRealtime` to share a single, robust connection across many components with zero React Context render cascades.
-* **Traffic-Aware Heartbeats**: Minimize unnecessary bandwidth with keep-alive heartbeats that only ping when the websocket connection is idle.
-* **Auto-Reconnection**: Resilient reconnection using a custom exponential backoff manager.
-* **Zero Dependencies & Tree-Shakable**: Built using modern ES tooling compiling to a microscopic size (~8 KB minified).
+Cut the connection and watch the backoff grow, messages queue while offline and flush on
+reconnect, and presence rooms empty themselves. Four steps, each with the code beside a
+live demo.
 
 ---
 
@@ -24,6 +26,29 @@ A premium, lightweight, zero-dependency real-time engine and hooks package for J
 ```bash
 npm install universal-realtime
 ```
+
+React is only needed if you use the hooks — see the entry points below.
+
+## Entry points
+
+| Import from | Contains | Needs React |
+|---|---|---|
+| `universal-realtime/client` | `RealtimeClient`, `ReconnectManager`, `getDelay` | **No** |
+| `universal-realtime` | everything above **plus** the React hooks | Yes |
+| `universal-realtime/server` | `RealtimeServer`, `PresenceRoom`, `SessionStore` (Node, needs `ws`) | No |
+
+Use `/client` in vanilla JS/TS, Node, Angular, Vue or Svelte. The root entry imports React
+for the hooks, so importing it without React installed will fail.
+
+## Key Features
+
+* **Framework-Agnostic Core** — `RealtimeClient` runs in vanilla JS/TS, Node.js (via a custom WebSocket constructor), Angular, Vue, Svelte, or SSR environments (Next.js/Remix safe).
+* **Auto-Reconnection** — exponential backoff with ±25% jitter, clamped to your `maxInterval`, so a recovering server isn't stampeded by every client at once.
+* **Offline Send Queue** — messages sent while the socket is down are held in order and flushed on reconnect.
+* **Traffic-Aware Heartbeats** — a keep-alive only pings after a quiet interval; any inbound frame resets the timer, so a busy connection never spends bandwidth proving it is alive.
+* **Multiplexed React Hooks** — `RealtimeProvider` and `useRealtime` share a single connection across many components without Context render cascades.
+* **Presence Rooms** — join a room, and leaving is automatic on disconnect.
+* **Zero runtime dependencies** — core client ≈5 KB minified; the React hooks add roughly the same again.
 
 ---
 
@@ -213,6 +238,29 @@ function TodoList({ initialTodos }) {
 
 ---
 
+## Testing
+
+```bash
+npm test              # 77 tests
+npm run test:coverage # ~96% statements
+npm run lint          # tsc --noEmit
+```
+
+Coverage includes the behaviours that are hard to get right and easy to regress:
+reconnection backoff invariants, server heartbeat and zombie-connection termination,
+presence join/leave across rooms, offline queue flushing, SSE error and reconnect
+branches, and listener isolation when a subscriber throws.
+
+`npm publish` is gated on `lint && test && build`, so a stale `dist/` cannot reach the
+registry.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Notable in **1.4.x**: a React-free `/client` entry point,
+a presence leak where users were never removed on disconnect, `usePresence` silently
+discarding its `roomId`, and a backoff cap that jitter could exceed.
+
 ## License
+
 MIT
 
